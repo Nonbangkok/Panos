@@ -1,0 +1,20 @@
+source_dir = "SOURCE_DIR"
+watch_mode = false
+
+[[rules]]
+name = "Images"
+extensions = ["jpg", "jpeg", "png", "gif"]
+patterns = []
+destination = "Images"
+
+[[rules]]
+name = "Documents"
+extensions = ["pdf", "docx", "txt"]
+patterns = []
+destination = "Docs"
+
+[[rules]]
+name = "Videos"
+extensions = ["mp4", "mkv", "mov"]
+patterns = []
+destination = "Videos"
