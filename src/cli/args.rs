@@ -33,4 +33,8 @@ pub struct Args {
     /// Run in watch mode (background daemon)
     #[arg(short, long)]
     pub watch: bool,
+
+    /// Run undo mode (restore last session)
+    #[arg(short, long)]
+    pub undo: bool,
 }

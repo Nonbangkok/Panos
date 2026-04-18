@@ -5,7 +5,11 @@ use clap::Parser;
 use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
-use panos::{Args, Config, load_config, organize, remove_empty_dirs, watch_mode};
+use panos::{
+    Args, Config, load_config, organize, remove_empty_dirs, watch_mode,
+    file_ops::{MoveRecord, Session},
+    organizer::run_undo,
+};
 
 fn main() -> Result<()> {
     // Initialize logging
@@ -26,14 +30,27 @@ fn main() -> Result<()> {
     if let Some(source) = args.source {
         config.source_dir = source;
     }
-
     info!("Source directory: {:?}", config.source_dir);
+
+    // Undo operation
+    if args.undo {
+        run_undo(&config)?;
+        remove_empty_dirs(&config.source_dir, args.dry_run)?;
+        return Ok(());
+    }
 
     if args.dry_run {
         info!("Dry run mode enabled. Files will not be moved.");
     }
 
-    organize(&config, args.dry_run)?;
+    let history: Vec<MoveRecord> = organize(&config, args.dry_run)?;
+
+    if !history.is_empty() {
+        let session = Session { moves: history };
+        session.save(&config.source_dir)?;
+        info!("History saved. You can undo this operation with --undo");
+    }
+
     remove_empty_dirs(&config.source_dir, args.dry_run)?;
 
     if args.watch {
