@@ -5,6 +5,14 @@ edition = "2024"
 authors = ["Nonbangkok"]
 description = "Universal File Organizer OS"
 
+[lib]
+name = "panos"
+path = "src/lib.rs"
+ 
+[[bin]]
+name = "panos"
+path = "src/main.rs"
+
 [dependencies]
 clap = { version = "4.4", features = ["derive", "cargo"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -13,3 +21,4 @@ walkdir = "2.4"
 anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+glob = "0.3"
