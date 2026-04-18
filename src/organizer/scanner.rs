@@ -1,11 +1,11 @@
 //! Directory scanning and organization logic
 
-use crate::config::Config;
 use anyhow::Result;
 use std::path::PathBuf;
 use tracing::info;
 use walkdir::WalkDir;
 
+use crate::config::Config;
 use crate::file_ops::move_file;
 use crate::rules::{find_rule_for_file, is_temp_file};
 

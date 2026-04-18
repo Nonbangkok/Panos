@@ -1,7 +1,7 @@
 //! Rule matching logic
 
-use crate::config::Rule;
 use std::path::Path;
+use crate::config::Rule;
 
 /// Find the first rule that matches the given file
 pub fn find_rule_for_file<'a>(path: &std::path::Path, rules: &'a [Rule]) -> Option<&'a Rule> {
