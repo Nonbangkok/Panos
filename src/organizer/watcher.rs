@@ -42,8 +42,10 @@ fn run_event_loop(
     loop {
         match rx.recv_timeout(Duration::from_millis(config.polling_interval_ms)) {
             Ok(Ok(event)) => {
-
-                debug!("Event detected: {:?} for paths: {:?}", event.kind, event.paths);
+                debug!(
+                    "Event detected: {:?} for paths: {:?}",
+                    event.kind, event.paths
+                );
 
                 // Check if we are currently organizing (Atomic Lock) and Filter out unnecessary events (Path Exclusion)
                 if IS_ORGANIZING.load(Ordering::SeqCst) || should_ignore(&event, config) {
@@ -87,14 +89,21 @@ fn should_ignore(event: &Event, config: &Config) -> bool {
         }
 
         // Ignore trash, unknown, and history directories
-        if abs_path.starts_with(&abs_trash) || abs_path.starts_with(&abs_unknown) || abs_path == abs_history {
+        if abs_path.starts_with(&abs_trash)
+            || abs_path.starts_with(&abs_unknown)
+            || abs_path == abs_history
+        {
             return true;
         }
-        
+
         // Ignore hidden files/folders (dotfiles) and ignore patterns
         if let Some(name) = abs_path.file_name().and_then(|n| n.to_str()) {
-            if config.ignore_patterns.iter().any(|p| name == *p) { return true; }
-            if config.exclude_hidden && name.starts_with('.') { return true; }
+            if config.ignore_patterns.iter().any(|p| name == *p) {
+                return true;
+            }
+            if config.exclude_hidden && name.starts_with('.') {
+                return true;
+            }
         }
 
         // 2. Ignore destination paths (if they are inside source_dir)
@@ -116,11 +125,11 @@ fn process_stabilized_events(config: &Config, dry_run: bool) {
 
     match organize(config, dry_run) {
         Ok(history) if !history.is_empty() => {
-            let mut session = Session::load(&config.source_dir, &config.history_file)
-                .unwrap_or_default();
-            
+            let mut session =
+                Session::load(&config.source_dir, &config.history_file).unwrap_or_default();
+
             session.moves.extend(history);
-            
+
             if let Err(e) = session.save(&config.source_dir, &config.history_file) {
                 error!("Failed to save history: {}", e);
             }

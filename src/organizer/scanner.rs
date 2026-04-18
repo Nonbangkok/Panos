@@ -6,9 +6,9 @@ use tracing::info;
 use walkdir::WalkDir;
 
 use crate::config::Config;
+use crate::file_ops::history::MoveRecord;
 use crate::file_ops::move_file;
 use crate::rules::{find_rule_for_file, is_temp_file};
-use crate::file_ops::history::MoveRecord;
 
 /// Organize files in the source directory according to rules
 pub fn organize(config: &Config, dry_run: bool) -> Result<Vec<MoveRecord>> {
@@ -34,14 +34,19 @@ pub fn organize(config: &Config, dry_run: bool) -> Result<Vec<MoveRecord>> {
             }
 
             // Ignore specific patterns
-            if config.ignore_patterns.iter().any(|pattern| name == *pattern) {
+            if config
+                .ignore_patterns
+                .iter()
+                .any(|pattern| name == *pattern)
+            {
                 return false;
             }
 
-            if name == config.trash_dir.to_str().unwrap_or("") || 
-                name == config.unknown_dir.to_str().unwrap_or("") ||
-                name == config.history_file {
-                    return false;
+            if name == config.trash_dir.to_str().unwrap_or("")
+                || name == config.unknown_dir.to_str().unwrap_or("")
+                || name == config.history_file
+            {
+                return false;
             }
 
             // Ignore destination directories

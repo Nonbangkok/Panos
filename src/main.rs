@@ -3,23 +3,21 @@
 use anyhow::Result;
 use clap::Parser;
 use tracing::info;
-use tracing_subscriber::{FmtSubscriber,EnvFilter};
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use panos::{
-    Args, Config, load_config, organize, remove_empty_dirs, watch_mode,
+    Args, Config,
     file_ops::{MoveRecord, Session},
+    load_config, organize,
     organizer::run_undo,
+    remove_empty_dirs, watch_mode,
 };
 
 fn main() -> Result<()> {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let subscriber = FmtSubscriber::builder().with_env_filter(filter).finish();
 
-    let subscriber = FmtSubscriber::builder()
-        .with_env_filter(filter)
-        .finish();
-    
     tracing::subscriber::set_global_default(subscriber)?;
 
     let args: Args = Args::parse();

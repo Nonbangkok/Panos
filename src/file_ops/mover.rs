@@ -1,9 +1,9 @@
 //! File moving and handling operations
 
 use anyhow::Result;
+use chrono::Utc;
 use std::path::PathBuf;
 use tracing::info;
-use chrono::Utc;
 
 use crate::file_ops::history::MoveRecord;
 
@@ -13,7 +13,9 @@ pub fn move_file(
     dest_dir: &std::path::Path,
     dry_run: bool,
 ) -> Result<Option<MoveRecord>> {
-    let source_parent = source.parent().ok_or_else(|| anyhow::anyhow!("Could not get parent directory"))?;
+    let source_parent = source
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Could not get parent directory"))?;
     if source_parent == dest_dir {
         // File is already in the target directory, nothing to do
         return Ok(None);

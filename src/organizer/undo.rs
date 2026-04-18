@@ -8,7 +8,8 @@ use crate::file_ops::{Session, move_file};
 
 pub fn run_undo(config: &Config) -> Result<()> {
     // 1. Load history log
-    let session = Session::load(&config.source_dir, &config.history_file).context("Failed to load history log")?;
+    let session = Session::load(&config.source_dir, &config.history_file)
+        .context("Failed to load history log")?;
 
     if session.moves.is_empty() {
         info!("No recent moves found to undo.");
