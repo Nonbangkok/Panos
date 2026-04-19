@@ -48,7 +48,7 @@ fn main() -> Result<()> {
 
     let history: Vec<MoveRecord> = organize(&config, args.dry_run, &reporter)?;
 
-    if !history.is_empty() {
+    if !args.dry_run && !history.is_empty() {
         let mut session = Session::load(&config.source_dir, &config.history_file)?;
         session.moves.extend(history.clone());
         session.save(&config.source_dir, &config.history_file)?;
@@ -56,10 +56,6 @@ fn main() -> Result<()> {
     }
 
     remove_empty_dirs(&config.source_dir, args.dry_run, &history, &reporter)?;
-    if args.dry_run {
-        let history_path = config.source_dir.join(&config.history_file);
-        std::fs::remove_file(history_path)?;
-    }
 
     if args.watch {
         watch_mode(&config, args.dry_run)?;
