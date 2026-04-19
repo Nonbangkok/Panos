@@ -1,11 +1,13 @@
 use panos::{
-    Config, Rule,
     file_ops::{Session, remove_empty_dirs},
     organizer::{organize, run_undo},
 };
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
+
+mod common;
+use common::{test_config, test_rule};
 
 #[test]
 fn test_full_organization_flow() -> anyhow::Result<()> {
@@ -39,35 +41,18 @@ fn test_full_organization_flow() -> anyhow::Result<()> {
     fs::write(&file5, "jpg content in subfolder")?;
 
     // 3. Setup configuration
-    let mut config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![
-            Rule {
-                name: "Images".to_string(),
-                extensions: vec!["jpg".to_string(), "png".to_string()],
-                patterns: vec![],
-                destination: PathBuf::from(images_dir),
-                compiled_patterns: vec![],
-            },
-            Rule {
-                name: "Documents".to_string(),
-                extensions: vec!["pdf".to_string()],
-                patterns: vec![],
-                destination: PathBuf::from(docs_dir),
-                compiled_patterns: vec![],
-            },
-        ],
-        watch_mode: false,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec!["tmp".to_string()],
-        ignore_patterns: vec![],
-        trash_dir: PathBuf::from(trash_dir),
-        unknown_dir: PathBuf::from(unknown_dir),
-        history_file: ".panos_history.json".to_string(),
-        exclude_hidden: false,
-    };
-    config.sanitize();
+    let mut config = test_config(&source_path);
+    config.rules = vec![test_rule("Images", vec!["jpg", "png"], vec![]), {
+        let mut r = test_rule("Documents", vec!["pdf"], vec![]);
+        r.destination = PathBuf::from(docs_dir);
+        r
+    }];
+    config.debounce_seconds = 1;
+    config.temp_extensions = vec!["tmp".to_string()];
+    config.trash_dir = PathBuf::from(trash_dir);
+    config.unknown_dir = PathBuf::from(unknown_dir);
+    config.history_file = ".panos_history.json".to_string();
+    config.exclude_hidden = false;
 
     // 4. Run organization
     let history = organize(&config, false)?;
@@ -108,26 +93,13 @@ fn test_dry_run_does_not_move_files() -> anyhow::Result<()> {
     let file1 = source_path.join("test.jpg");
     fs::write(&file1, "content")?;
 
-    let mut config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![Rule {
-            name: "Images".to_string(),
-            extensions: vec!["jpg".to_string()],
-            patterns: vec![],
-            destination: PathBuf::from("images"),
-            compiled_patterns: vec![],
-        }],
-        watch_mode: false,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec![],
-        ignore_patterns: vec![],
-        trash_dir: PathBuf::from("trash"),
-        unknown_dir: PathBuf::from("unknown"),
-        history_file: ".panos_history.json".to_string(),
-        exclude_hidden: false,
-    };
-    config.sanitize();
+    let mut config = test_config(&source_path);
+    config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
+    config.debounce_seconds = 1;
+    config.trash_dir = PathBuf::from("trash");
+    config.unknown_dir = PathBuf::from("unknown");
+    config.history_file = ".panos_history.json".to_string();
+    config.exclude_hidden = false;
 
     // Run organization in dry_run mode
     organize(&config, true)?;
@@ -192,46 +164,27 @@ fn test_comprehensive_scenario() -> anyhow::Result<()> {
     fs::write(source_path.join("target"), "should be ignored")?;
 
     // 3. Configuration
-    let mut config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![
-            Rule {
-                name: "Photos".to_string(),
-                extensions: vec!["jpg".to_string(), "png".to_string()],
-                patterns: vec![],
-                destination: PathBuf::from("images"),
-                compiled_patterns: vec![],
-            },
-            Rule {
-                name: "Docs".to_string(),
-                extensions: vec!["pdf".to_string()],
-                patterns: vec!["*.tar.gz".to_string()],
-                destination: PathBuf::from("docs"),
-                compiled_patterns: vec![],
-            },
-            Rule {
-                name: "Archives".to_string(),
-                extensions: vec![],
-                patterns: vec![
-                    "*backup*".to_string(),
-                    "old_*".to_string(),
-                    "IMPORTANT*".to_string(),
-                ],
-                destination: PathBuf::from("archives"),
-                compiled_patterns: vec![],
-            },
-        ],
-        watch_mode: false,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec!["tmp".to_string(), "cache".to_string()],
-        ignore_patterns: vec!["node_modules".to_string(), "target".to_string()],
-        trash_dir: PathBuf::from("trash"),
-        unknown_dir: PathBuf::from("unknown"),
-        history_file: ".panos_history.json".to_string(),
-        exclude_hidden: false, // Set to false to test hidden file handling
-    };
-    config.sanitize();
+    let mut config = test_config(&source_path);
+    config.rules = vec![
+        {
+            let mut r = test_rule("Photos", vec!["jpg", "png"], vec![]);
+            r.destination = PathBuf::from("images");
+            r
+        },
+        {
+            let mut r = test_rule("Docs", vec!["pdf"], vec!["*.tar.gz"]);
+            r.destination = PathBuf::from("docs");
+            r
+        },
+        test_rule("Archives", vec![], vec!["*backup*", "old_*", "IMPORTANT*"]),
+    ];
+    config.debounce_seconds = 1;
+    config.temp_extensions = vec!["tmp".to_string(), "cache".to_string()];
+    config.ignore_patterns = vec!["node_modules".to_string(), "target".to_string()];
+    config.trash_dir = PathBuf::from("trash");
+    config.unknown_dir = PathBuf::from("unknown");
+    config.history_file = ".panos_history.json".to_string();
+    config.exclude_hidden = false;
 
     // 4. Run
     organize(&config, false)?;
@@ -283,26 +236,17 @@ fn test_undo_operation() -> anyhow::Result<()> {
     let file1 = source_path.join("photo.jpg");
     fs::write(&file1, "content")?;
 
-    let mut config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![Rule {
-            name: "Photos".to_string(),
-            extensions: vec!["jpg".to_string()],
-            patterns: vec![],
-            destination: PathBuf::from("images"),
-            compiled_patterns: vec![],
-        }],
-        watch_mode: false,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec![],
-        ignore_patterns: vec![],
-        trash_dir: PathBuf::from("trash"),
-        unknown_dir: PathBuf::from("unknown"),
-        history_file: ".panos_history.json".to_string(),
-        exclude_hidden: false,
-    };
-    config.sanitize();
+    let mut config = test_config(&source_path);
+    config.rules = vec![{
+        let mut r = test_rule("Photos", vec!["jpg"], vec![]);
+        r.destination = PathBuf::from("images");
+        r
+    }];
+    config.debounce_seconds = 1;
+    config.trash_dir = PathBuf::from("trash");
+    config.unknown_dir = PathBuf::from("unknown");
+    config.history_file = ".panos_history.json".to_string();
+    config.exclude_hidden = false;
 
     // 2. Organize
     let history = organize(&config, false)?;
@@ -336,25 +280,16 @@ fn test_should_ignore_rigorous() -> anyhow::Result<()> {
     let source_path = tmp_dir.path().to_path_buf();
 
     // Setup config
-    let config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![Rule {
-            name: "Test".to_string(),
-            extensions: vec!["jpg".to_string()],
-            patterns: vec![],
-            destination: PathBuf::from("images"),
-            compiled_patterns: vec![],
-        }],
-        watch_mode: true,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec!["tmp".to_string()],
-        ignore_patterns: vec!["node_modules".to_string()],
-        trash_dir: PathBuf::from("trash"),
-        unknown_dir: PathBuf::from("unknown"),
-        history_file: ".history".to_string(),
-        exclude_hidden: true,
-    };
+    let mut config = test_config(&source_path);
+    config.rules = vec![test_rule("Test", vec!["jpg"], vec![])];
+    config.watch_mode = true;
+    config.debounce_seconds = 1;
+    config.temp_extensions = vec!["tmp".to_string()];
+    config.ignore_patterns = vec!["node_modules".to_string()];
+    config.trash_dir = PathBuf::from("trash");
+    config.unknown_dir = PathBuf::from("unknown");
+    config.history_file = ".history".to_string();
+    config.exclude_hidden = true;
 
     // Create the files so canonicalization works reliably in the test
     let trash_file = source_path.join("trash/file.txt");
@@ -408,35 +343,25 @@ fn test_watcher_stress_simulation() -> anyhow::Result<()> {
         fs::create_dir_all(source_path.join(format!("folder_{}", i)))?;
     }
 
-    let mut config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![
-            Rule {
-                name: "Photos".to_string(),
-                extensions: vec!["jpg".to_string()],
-                patterns: vec![],
-                destination: PathBuf::from("images"),
-                compiled_patterns: vec![],
-            },
-            Rule {
-                name: "Docs".to_string(),
-                extensions: vec!["pdf".to_string()],
-                patterns: vec![],
-                destination: PathBuf::from("docs"),
-                compiled_patterns: vec![],
-            },
-        ],
-        watch_mode: false,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec!["tmp".to_string()],
-        ignore_patterns: vec![],
-        trash_dir: PathBuf::from("trash"),
-        unknown_dir: PathBuf::from("unknown"),
-        history_file: ".history.json".to_string(),
-        exclude_hidden: false,
-    };
-    config.sanitize();
+    let mut config = test_config(&source_path);
+    config.rules = vec![
+        {
+            let mut r = test_rule("Photos", vec!["jpg"], vec![]);
+            r.destination = PathBuf::from("images");
+            r
+        },
+        {
+            let mut r = test_rule("Docs", vec!["pdf"], vec![]);
+            r.destination = PathBuf::from("docs");
+            r
+        },
+    ];
+    config.debounce_seconds = 1;
+    config.temp_extensions = vec!["tmp".to_string()];
+    config.trash_dir = PathBuf::from("trash");
+    config.unknown_dir = PathBuf::from("unknown");
+    config.history_file = ".history.json".to_string();
+    config.exclude_hidden = false;
 
     // STRESS: Create 100 files across different folders
     for i in 0..100 {
@@ -478,26 +403,13 @@ fn test_dry_run_empty_dir_prediction() -> anyhow::Result<()> {
     let file_path = nested.join("test.jpg");
     fs::write(&file_path, "content")?;
 
-    let mut config = Config {
-        source_dir: source_path.clone(),
-        rules: vec![Rule {
-            name: "Images".to_string(),
-            extensions: vec!["jpg".to_string()],
-            patterns: vec![],
-            destination: PathBuf::from("images"),
-            compiled_patterns: vec![],
-        }],
-        watch_mode: false,
-        debounce_seconds: 1,
-        polling_interval_ms: 100,
-        temp_extensions: vec![],
-        ignore_patterns: vec![],
-        trash_dir: PathBuf::from("trash"),
-        unknown_dir: PathBuf::from("unknown"),
-        history_file: ".history.json".to_string(),
-        exclude_hidden: false,
-    };
-    config.sanitize();
+    let mut config = test_config(&source_path);
+    config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
+    config.debounce_seconds = 1;
+    config.trash_dir = PathBuf::from("trash");
+    config.unknown_dir = PathBuf::from("unknown");
+    config.history_file = ".history.json".to_string();
+    config.exclude_hidden = false;
 
     // Run in dry run
     let history = organize(&config, true)?;

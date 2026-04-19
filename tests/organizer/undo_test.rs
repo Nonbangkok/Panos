@@ -1,25 +1,9 @@
-use panos::Config;
 use panos::file_ops::history::{MoveRecord, Session};
 use panos::organizer::undo::run_undo;
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
-fn create_test_config() -> Config {
-    Config {
-        source_dir: PathBuf::from("."),
-        rules: vec![],
-        watch_mode: false,
-        debounce_seconds: 2,
-        polling_interval_ms: 100,
-        temp_extensions: vec![],
-        ignore_patterns: vec![],
-        trash_dir: PathBuf::from(".trash"),
-        unknown_dir: PathBuf::from(".unknown"),
-        history_file: ".history.json".to_string(),
-        exclude_hidden: true,
-    }
-}
+use crate::common::test_config;
 
 #[test]
 fn test_undo_single_file() -> anyhow::Result<()> {
@@ -41,8 +25,7 @@ fn test_undo_single_file() -> anyhow::Result<()> {
     };
     session.save(root, ".history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let config = test_config(root);
 
     run_undo(&config, false)?;
     assert!(src.exists(), "Source file should be restored at {:?}", src);
@@ -75,8 +58,7 @@ fn test_undo_multiple_files_filo_order() -> anyhow::Result<()> {
     let session = Session { moves };
     session.save(root, ".history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let config = test_config(root);
 
     run_undo(&config, false)?;
 
@@ -113,8 +95,7 @@ fn test_undo_dry_run_no_changes() -> anyhow::Result<()> {
     };
     session.save(root, ".history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let config = test_config(root);
 
     run_undo(&config, true)?;
     assert!(!src.exists(), "Source should NOT be created in dry run");
@@ -134,8 +115,7 @@ fn test_undo_empty_session() -> anyhow::Result<()> {
     let session = Session { moves: vec![] };
     session.save(root, ".history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let config = test_config(root);
 
     let result = run_undo(&config, false);
     assert!(result.is_ok(), "Empty undo should succeed without error");
@@ -146,7 +126,7 @@ fn test_undo_empty_session() -> anyhow::Result<()> {
 fn test_undo_missing_history_file() -> anyhow::Result<()> {
     // Handle missing history file gracefully
     let tmp = TempDir::new()?;
-    let mut config = create_test_config();
+    let mut config = test_config(tmp.path());
     config.source_dir = tmp.path().to_path_buf();
     config.history_file = "nonexistent.json".to_string();
 
@@ -176,8 +156,7 @@ fn test_undo_missing_file_at_destination() -> anyhow::Result<()> {
     };
     session.save(root, ".history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let config = test_config(root);
 
     let result = run_undo(&config, false);
     assert!(
@@ -213,8 +192,7 @@ fn test_undo_massive_batch_500() -> anyhow::Result<()> {
     let session = Session { moves };
     session.save(root, ".history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let config = test_config(root);
 
     run_undo(&config, false)?;
     assert_eq!(
@@ -245,8 +223,7 @@ fn test_undo_unicode_paths() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -277,8 +254,7 @@ fn test_undo_spaces_and_special_chars() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -309,8 +285,7 @@ fn test_undo_deeply_nested_revert() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -330,8 +305,7 @@ fn test_undo_history_cleanup_after_success() -> anyhow::Result<()> {
     let session = Session { moves: vec![] };
     session.save(root, h_file)?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = h_file.to_string();
 
     run_undo(&config, false)?;
@@ -370,8 +344,7 @@ fn test_undo_partial_success_mixed() -> anyhow::Result<()> {
     };
     session.save(root, "mixed.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "mixed.json".to_string();
 
     run_undo(&config, false)?;
@@ -400,8 +373,7 @@ fn test_undo_source_parent_creation() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -436,8 +408,7 @@ fn test_undo_revert_from_trash() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -468,8 +439,7 @@ fn test_undo_revert_from_unknown() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -499,8 +469,7 @@ fn test_undo_idempotency() -> anyhow::Result<()> {
     };
     session.save(root, h_file)?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = h_file.to_string();
 
     run_undo(&config, false)?; // First run
@@ -535,8 +504,7 @@ fn test_undo_large_filename() -> anyhow::Result<()> {
     };
     session.save(root, "h.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "h.json".to_string();
 
     run_undo(&config, false)?;
@@ -563,8 +531,7 @@ fn test_undo_move_record_timestamps() -> anyhow::Result<()> {
     };
     session.save(root, "history.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "history.json".to_string();
 
     run_undo(&config, false)?;
@@ -591,8 +558,7 @@ fn test_undo_directory_recreation_on_revert() -> anyhow::Result<()> {
     };
     session.save(root, "h.json")?;
 
-    let mut config = create_test_config();
-    config.source_dir = root.to_path_buf();
+    let mut config = test_config(root);
     config.history_file = "h.json".to_string();
 
     run_undo(&config, false)?;
@@ -607,7 +573,7 @@ fn test_undo_directory_recreation_on_revert() -> anyhow::Result<()> {
 fn test_undo_unmapped_history_file() -> anyhow::Result<()> {
     // Handled case where history file name in config changed
     let tmp = TempDir::new()?;
-    let mut config = create_test_config();
+    let mut config = test_config(tmp.path());
     config.source_dir = tmp.path().to_path_buf();
     config.history_file = "wrong_name.json".to_string();
 
