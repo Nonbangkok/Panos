@@ -13,6 +13,12 @@ pub fn run_undo(config: &Config, dry_run: bool) -> Result<()> {
 
     if session.moves.is_empty() {
         info!("No recent moves found to undo.");
+        let history_path = config.source_dir.join(&config.history_file);
+        if !dry_run {
+            if history_path.exists() {
+                std::fs::remove_file(history_path)?;
+            }
+        }
         return Ok(());
     }
 
@@ -36,9 +42,7 @@ pub fn run_undo(config: &Config, dry_run: bool) -> Result<()> {
             }
 
             if !dry_run {
-                if let Some(original_dir) = record.source.parent() {
-                    move_file(&record.destination, original_dir, dry_run)?;
-                }
+                move_file(&record.destination, &record.source, dry_run)?;
             }
         } else {
             warn!(

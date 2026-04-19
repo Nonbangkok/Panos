@@ -83,16 +83,17 @@ fn process_files_in_parallel(
     let history_results: Result<Vec<Option<MoveRecord>>> = entries
         .into_par_iter()
         .map(|path| {
-            // decide where the file should go
+            let file_name = path.file_name().ok_or_else(|| anyhow::anyhow!("No filename"))?;
+            
             if is_temp_file(&path, &config.temp_extensions) {
-                let trash_dir: PathBuf = config.source_dir.join(&config.trash_dir);
-                move_file(&path, &trash_dir, dry_run)
+                let trash_path: PathBuf = config.source_dir.join(&config.trash_dir).join(file_name);
+                move_file(&path, &trash_path, dry_run)
             } else if let Some(rule) = find_rule_for_file(&path, &config.rules) {
-                let dest_dir: PathBuf = config.source_dir.join(&rule.destination);
-                move_file(&path, &dest_dir, dry_run)
+                let dest_path: PathBuf = config.source_dir.join(&rule.destination).join(file_name);
+                move_file(&path, &dest_path, dry_run)
             } else {
-                let unknown_dir: PathBuf = config.source_dir.join(&config.unknown_dir);
-                move_file(&path, &unknown_dir, dry_run)
+                let unknown_path: PathBuf = config.source_dir.join(&config.unknown_dir).join(file_name);
+                move_file(&path, &unknown_path, dry_run)
             }
         })
         .collect();
