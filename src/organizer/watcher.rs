@@ -73,22 +73,25 @@ fn run_event_loop(
     }
 }
 
-/// Determines if an event should be ignored to prevent loops or noise
-fn should_ignore(event: &Event, config: &Config) -> bool {
+/// Determines if an event should be ignored.
+/// An event is ignored ONLY if ALL paths in it are considered noise (trash, destinations, etc.)
+pub fn should_ignore(event: &Event, config: &Config) -> bool {
     let abs_source = std::fs::canonicalize(&config.source_dir).unwrap_or(config.source_dir.clone());
     let abs_trash = abs_source.join(&config.trash_dir);
     let abs_unknown = abs_source.join(&config.unknown_dir);
     let abs_history = abs_source.join(&config.history_file);
 
-    for path in &event.paths {
+    // If all paths in the event match ignore criteria, then we ignore the whole event.
+    // If even one path is "valid" (should be organized), we return false to trigger organize.
+    event.paths.iter().all(|path| {
         let abs_path = std::fs::canonicalize(path).unwrap_or(path.to_path_buf());
 
-        // Ignore source directory
+        // 1. Ignore source directory itself
         if abs_path == abs_source {
             return true;
         }
 
-        // Ignore trash, unknown, and history directories
+        // 2. Ignore internal managed directories (trash, unknown, history)
         if abs_path.starts_with(&abs_trash)
             || abs_path.starts_with(&abs_unknown)
             || abs_path == abs_history
@@ -96,7 +99,7 @@ fn should_ignore(event: &Event, config: &Config) -> bool {
             return true;
         }
 
-        // Ignore hidden files/folders (dotfiles) and ignore patterns
+        // 3. Ignore hidden files and user-defined ignore patterns
         if let Some(name) = abs_path.file_name().and_then(|n| n.to_str()) {
             if config.ignore_patterns.iter().any(|p| name == *p) {
                 return true;
@@ -106,15 +109,16 @@ fn should_ignore(event: &Event, config: &Config) -> bool {
             }
         }
 
-        // 2. Ignore destination paths (if they are inside source_dir)
+        // 4. Ignore destination paths (to prevent trigger recursion when moving files)
         for rule in &config.rules {
             let dest_path = abs_source.join(&rule.destination);
             if abs_path.starts_with(&dest_path) {
                 return true;
             }
         }
-    }
-    false
+
+        false
+    })
 }
 
 fn process_stabilized_events(config: &Config, dry_run: bool) {
