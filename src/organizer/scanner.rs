@@ -75,7 +75,11 @@ fn collect_files(config: &Config) -> Vec<PathBuf> {
     entries
 }
 
-fn process_files_in_parallel(entries: Vec<PathBuf>, config: &Config, dry_run: bool) -> Result<Vec<Option<MoveRecord>>> {
+fn process_files_in_parallel(
+    entries: Vec<PathBuf>,
+    config: &Config,
+    dry_run: bool,
+) -> Result<Vec<Option<MoveRecord>>> {
     let history_results: Result<Vec<Option<MoveRecord>>> = entries
         .into_par_iter()
         .map(|path| {
