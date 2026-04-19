@@ -53,16 +53,16 @@ pub fn move_file(
         }
     }
 
-    info!("Moving {:?} to {:?}", source, dest_path);
-
-    if !dry_run {
+    if dry_run {
+        info!("[DRY RUN] Would move {:?} to {:?}", source, dest_path);
+    } else {
+        info!("Moving {:?} to {:?}", source, dest_path);
         std::fs::rename(source, &dest_path)?;
-        return Ok(Some(MoveRecord {
-            source: source.to_path_buf(),
-            destination: dest_path,
-            timestamp: Utc::now(),
-        }));
     }
 
-    Ok(None)
+    Ok(Some(MoveRecord {
+        source: source.to_path_buf(),
+        destination: dest_path,
+        timestamp: Utc::now(),
+    }))
 }

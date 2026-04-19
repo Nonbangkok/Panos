@@ -21,7 +21,11 @@ pub fn organize(config: &Config, dry_run: bool) -> Result<Vec<MoveRecord>> {
 
     let mut history: Vec<MoveRecord> = Vec::new();
 
-    info!("Scanning {:?}...", config.source_dir);
+    if dry_run {
+        info!("[DRY RUN] Scanning {:?}...", config.source_dir);
+    } else {
+        info!("Scanning {:?}...", config.source_dir);
+    }
 
     for entry in WalkDir::new(&config.source_dir)
         .min_depth(1)
