@@ -7,10 +7,8 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use panos::{
     Args, Config,
-    file_ops::{MoveRecord, Session},
-    load_config, organize,
-    organizer::run_undo,
-    remove_empty_dirs, watch_mode,
+    file_ops::{MoveRecord, Session, remove_empty_dirs},
+    organizer::{organize, run_undo, watch_mode},
 };
 
 fn main() -> Result<()> {
@@ -26,7 +24,7 @@ fn main() -> Result<()> {
     info!("Config file: {:?}", args.config);
 
     // Load config
-    let mut config: Config = load_config(&args.config)?;
+    let mut config = Config::load(&args.config)?;
 
     // CLI override for source directory
     if let Some(source) = args.source {
@@ -34,30 +32,37 @@ fn main() -> Result<()> {
     }
     info!("Source directory: {:?}", config.source_dir);
 
-    // Undo operation
-    if args.undo {
-        run_undo(&config)?;
-        remove_empty_dirs(&config.source_dir, args.dry_run)?;
-        return Ok(());
-    }
-
     if args.dry_run {
         info!("Dry run mode enabled. Files will not be moved.");
+    }
+
+    // Undo operation
+    if args.undo {
+        run_undo(&config, args.dry_run)?;
+        remove_empty_dirs(&config.source_dir, args.dry_run, &[])?;
+        return Ok(());
     }
 
     let history: Vec<MoveRecord> = organize(&config, args.dry_run)?;
 
     if !history.is_empty() {
-        let session = Session { moves: history };
+        let mut session = Session::load(&config.source_dir, &config.history_file)?;
+        session.moves.extend(history.clone());
         session.save(&config.source_dir, &config.history_file)?;
         info!("History saved. You can undo this operation with --undo");
     }
 
-    remove_empty_dirs(&config.source_dir, args.dry_run)?;
+    remove_empty_dirs(&config.source_dir, args.dry_run, &history)?;
+    if args.dry_run {
+        let history_path = config.source_dir.join(&config.history_file);
+        std::fs::remove_file(history_path)?;
+    }
 
     if args.watch {
         watch_mode(&config, args.dry_run)?;
     }
+
+    info!("PANOS completed successfully.");
 
     Ok(())
 }
