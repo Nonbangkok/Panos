@@ -10,6 +10,7 @@ use tracing::{debug, error, info, warn};
 use crate::config::Config;
 use crate::file_ops::{Session, remove_empty_dirs};
 use crate::organizer::organize;
+use crate::ui::NoopReporter;
 
 /// Global lock to prevent the watcher from reacting to our own file movements
 static IS_ORGANIZING: AtomicBool = AtomicBool::new(false);
@@ -124,10 +125,12 @@ pub fn should_ignore(event: &Event, config: &Config) -> bool {
 fn process_stabilized_events(config: &Config, dry_run: bool) {
     info!("🚀 Change detected and stabilized. Running organization...");
 
+    let reporter = NoopReporter;
+
     // Set lock before starting
     IS_ORGANIZING.store(true, Ordering::SeqCst);
 
-    match organize(config, dry_run) {
+    match organize(config, dry_run, &reporter) {
         Ok(history) if !history.is_empty() => {
             let mut session =
                 Session::load(&config.source_dir, &config.history_file).unwrap_or_default();
@@ -140,7 +143,9 @@ fn process_stabilized_events(config: &Config, dry_run: bool) {
             info!("History updated in watch mode.");
 
             // Clean up empty directories
-            if let Err(e) = remove_empty_dirs(&config.source_dir, dry_run, &session.moves) {
+            if let Err(e) =
+                remove_empty_dirs(&config.source_dir, dry_run, &session.moves, &reporter)
+            {
                 error!("Failed to clean up empty directories: {}", e);
             }
         }

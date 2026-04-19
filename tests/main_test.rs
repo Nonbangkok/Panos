@@ -1,6 +1,7 @@
 use panos::{
     file_ops::{Session, remove_empty_dirs},
     organizer::{organize, run_undo},
+    ui::NoopReporter,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -55,8 +56,8 @@ fn test_full_organization_flow() -> anyhow::Result<()> {
     config.exclude_hidden = false;
 
     // 4. Run organization
-    let history = organize(&config, false)?;
-    remove_empty_dirs(&source_path, false, &history)?;
+    let history = organize(&config, false, &NoopReporter)?;
+    remove_empty_dirs(&source_path, false, &history, &NoopReporter)?;
 
     // 5. Assertions
     // Images moved
@@ -102,7 +103,7 @@ fn test_dry_run_does_not_move_files() -> anyhow::Result<()> {
     config.exclude_hidden = false;
 
     // Run organization in dry_run mode
-    organize(&config, true)?;
+    organize(&config, true, &NoopReporter)?;
 
     // File should still be in source
     assert!(file1.exists());
@@ -187,7 +188,7 @@ fn test_comprehensive_scenario() -> anyhow::Result<()> {
     config.exclude_hidden = false;
 
     // 4. Run
-    organize(&config, false)?;
+    organize(&config, false, &NoopReporter)?;
 
     // 5. Verification
     assert!(source_path.join("images/photo.jpg").exists());
@@ -218,7 +219,7 @@ fn test_comprehensive_scenario() -> anyhow::Result<()> {
     assert!(source_path.join("target").exists());
 
     // 6. Cleanup empty dirs
-    remove_empty_dirs(&source_path, false, &[])?;
+    remove_empty_dirs(&source_path, false, &[], &NoopReporter)?;
     assert!(!source_path.join("work/projects").exists());
     assert!(!source_path.join("work/temp").exists());
     assert!(!source_path.join("work").exists());
@@ -249,7 +250,7 @@ fn test_undo_operation() -> anyhow::Result<()> {
     config.exclude_hidden = false;
 
     // 2. Organize
-    let history = organize(&config, false)?;
+    let history = organize(&config, false, &NoopReporter)?;
     assert!(!history.is_empty());
 
     // Save session manually (simulating main.rs behavior)
@@ -262,7 +263,7 @@ fn test_undo_operation() -> anyhow::Result<()> {
     assert!(!file1.exists());
 
     // 3. Undo
-    run_undo(&config, false)?;
+    run_undo(&config, false, &NoopReporter)?;
 
     // 4. Verify restored
     assert!(file1.exists());
@@ -372,7 +373,7 @@ fn test_watcher_stress_simulation() -> anyhow::Result<()> {
     }
 
     // Run organization (as watch mode would trigger)
-    let history = organize(&config, false)?;
+    let history = organize(&config, false, &NoopReporter)?;
 
     // Should have 100 moves
     assert_eq!(history.len(), 100);
@@ -384,7 +385,7 @@ fn test_watcher_stress_simulation() -> anyhow::Result<()> {
     assert!(source_path.join("docs/file_99.pdf").exists());
 
     // Verify subfolders are empty (except the destination folders which are inside source)
-    remove_empty_dirs(&source_path, false, &history)?;
+    remove_empty_dirs(&source_path, false, &history, &NoopReporter)?;
     for i in 0..10 {
         assert!(!source_path.join(format!("folder_{}", i)).exists());
     }
@@ -412,11 +413,11 @@ fn test_dry_run_empty_dir_prediction() -> anyhow::Result<()> {
     config.exclude_hidden = false;
 
     // Run in dry run
-    let history = organize(&config, true)?;
+    let history = organize(&config, true, &NoopReporter)?;
     assert_eq!(history.len(), 1);
 
     // This should now detect that a/b/c, a/b, and a would be empty
-    remove_empty_dirs(&source_path, true, &history)?;
+    remove_empty_dirs(&source_path, true, &history, &NoopReporter)?;
 
     // Verify directories still exist (since it's dry run)
     assert!(source_path.join("a/b/c").exists());
