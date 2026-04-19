@@ -1,6 +1,7 @@
 use chrono::Utc;
 use panos::file_ops::history::MoveRecord;
 use panos::file_ops::remover::remove_empty_dirs;
+use panos::ui::reporter::NoopReporter;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -12,7 +13,7 @@ fn test_remover_basic_empty_dir_removal() -> anyhow::Result<()> {
     let empty_dir = root.join("empty_folder");
     fs::create_dir(&empty_dir)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !empty_dir.exists(),
         "Empty directory should be removed during actual execution"
@@ -28,7 +29,7 @@ fn test_remover_non_empty_dir_preserved() -> anyhow::Result<()> {
     fs::create_dir(&dir)?;
     fs::write(dir.join("file.txt"), "keep me")?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(dir.exists(), "Directory with files must be preserved");
     Ok(())
 }
@@ -40,7 +41,7 @@ fn test_remover_chained_recursive_empty_dirs() -> anyhow::Result<()> {
     let deep = root.join("a/b/c");
     fs::create_dir_all(&deep)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !root.join("a").exists(),
         "Nested empty directories should be removed recursively from bottom-up"
@@ -54,7 +55,7 @@ fn test_remover_root_scanned_dir_protection() -> anyhow::Result<()> {
     let root = tmp.path().join("scanned_root");
     fs::create_dir(&root)?;
 
-    remove_empty_dirs(&root, false, &[])?;
+    remove_empty_dirs(&root, false, &[], &NoopReporter)?;
     assert!(
         root.exists(),
         "The root directory being scanned must never be removed itself"
@@ -69,7 +70,7 @@ fn test_remover_dry_run_prediction_basic() -> anyhow::Result<()> {
     let empty_dir = root.join("dry_empty");
     fs::create_dir(&empty_dir)?;
 
-    remove_empty_dirs(root, true, &[])?;
+    remove_empty_dirs(root, true, &[], &NoopReporter)?;
     assert!(
         empty_dir.exists(),
         "Dry run must not perform actual disk removal"
@@ -85,7 +86,7 @@ fn test_remover_dry_run_recursive_prediction() -> anyhow::Result<()> {
     let b = a.join("b");
     fs::create_dir_all(&b)?;
 
-    remove_empty_dirs(root, true, &[])?;
+    remove_empty_dirs(root, true, &[], &NoopReporter)?;
     assert!(
         b.exists(),
         "Recursive chain must remain intact during dry run"
@@ -112,7 +113,7 @@ fn test_remover_move_source_triggers_emptiness_dry_run() -> anyhow::Result<()> {
         timestamp: Utc::now(),
     }];
 
-    remove_empty_dirs(root, true, &moves)?;
+    remove_empty_dirs(root, true, &moves, &NoopReporter)?;
     assert!(
         target_dir.exists(),
         "Actual directory must exist after dry run"
@@ -136,7 +137,7 @@ fn test_remover_mixed_move_and_nested_empty_dirs_dry_run() -> anyhow::Result<()>
         timestamp: Utc::now(),
     }];
 
-    remove_empty_dirs(root, true, &moves)?;
+    remove_empty_dirs(root, true, &moves, &NoopReporter)?;
     assert!(
         parent.exists(),
         "Deeply nested predicted empty directories should be tracked but not deleted"
@@ -152,7 +153,7 @@ fn test_remover_massive_sibling_directories() -> anyhow::Result<()> {
         fs::create_dir(root.join(format!("dir_{}", i)))?;
     }
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     for i in 0..500 {
         assert!(
             !root.join(format!("dir_{}", i)).exists(),
@@ -172,7 +173,7 @@ fn test_remover_extreme_depth_nesting() -> anyhow::Result<()> {
     }
     fs::create_dir_all(&current)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !root.join("v0").exists(),
         "Chain with 50 levels of nesting should be fully cleared"
@@ -188,7 +189,7 @@ fn test_remover_hidden_file_prevents_removal() -> anyhow::Result<()> {
     fs::create_dir(&dir)?;
     fs::write(dir.join(".DS_Store"), "metadata")?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         dir.exists(),
         "Directory containing hidden files should not be considered empty"
@@ -203,7 +204,7 @@ fn test_remover_unicode_directory_names() -> anyhow::Result<()> {
     let unicode_dir = root.join("โฟลเดอร์_🔥");
     fs::create_dir(&unicode_dir)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !unicode_dir.exists(),
         "Directories with Unicode or Emoji names should be handled correctly"
@@ -226,7 +227,7 @@ fn test_remover_unrelated_files_prevent_removal() -> anyhow::Result<()> {
         timestamp: Utc::now(),
     }];
 
-    remove_empty_dirs(root, true, &moves)?;
+    remove_empty_dirs(root, true, &moves, &NoopReporter)?;
     assert!(
         dir.exists(),
         "Directory should not be predicted empty if it holds unrelated files"
@@ -241,7 +242,7 @@ fn test_remover_missing_permission_graceful_skip() -> anyhow::Result<()> {
     let restricted = root.join("restricted");
     fs::create_dir(&restricted)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(!restricted.exists(), "Normal empty dir should be removed");
     Ok(())
 }
@@ -257,7 +258,7 @@ fn test_remover_interleaved_heavy_structure() -> anyhow::Result<()> {
     fs::create_dir_all(&c)?;
     fs::write(b.join("file.txt"), "data")?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         a.exists(),
         "Parent should stay if one child remains non-empty"
@@ -275,7 +276,7 @@ fn test_remover_special_characters_in_dir_name() -> anyhow::Result<()> {
     let dir = root.join(name);
     fs::create_dir(&dir)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !dir.exists(),
         "Should handle directory names with brackets and special shell characters"
@@ -294,7 +295,7 @@ fn test_remover_very_long_path_nesting() -> anyhow::Result<()> {
     }
     fs::create_dir_all(&current)?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !root.join(&long_segment).exists(),
         "Very long nested paths should be cleared successfully"
@@ -308,8 +309,8 @@ fn test_remover_idempotency_check() -> anyhow::Result<()> {
     let root = tmp.path();
     fs::create_dir_all(root.join("x/y/z"))?;
 
-    remove_empty_dirs(root, false, &[])?;
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(
         !root.join("x").exists(),
         "Multiple re-runs of remover should be safe and idempotent"
@@ -326,7 +327,7 @@ fn test_remover_empty_subdirs_with_contents_first_logic() -> anyhow::Result<()> 
     fs::create_dir_all(&b)?;
     fs::write(a.join("parent_file.txt"), "stay")?;
 
-    remove_empty_dirs(root, false, &[])?;
+    remove_empty_dirs(root, false, &[], &NoopReporter)?;
     assert!(a.exists(), "Parent with file must stay");
     assert!(
         !b.exists(),
@@ -354,7 +355,7 @@ fn test_remover_multiple_moves_from_same_dir() -> anyhow::Result<()> {
         });
     }
 
-    remove_empty_dirs(root, true, &moves)?;
+    remove_empty_dirs(root, true, &moves, &NoopReporter)?;
     assert!(
         dir.exists(),
         "Predicted removal for dry run should wait for move sources"

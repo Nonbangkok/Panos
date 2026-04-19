@@ -1,22 +1,27 @@
 //! Empty directory removing and handling operations
 
-use crate::file_ops::MoveRecord;
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tracing::info;
 use walkdir::WalkDir;
 
+use crate::file_ops::MoveRecord;
+use crate::ui::ProgressReporter;
+
 pub fn remove_empty_dirs(
     root: &std::path::Path,
     dry_run: bool,
     predicted_move: &[MoveRecord],
+    reporter: &dyn ProgressReporter,
 ) -> Result<()> {
     // Map source paths to a HashSet for O(1) lookups
     let move_sources: HashSet<_> = predicted_move.iter().map(|m| m.source.clone()).collect();
 
     // Track directories that WOULD be empty in dry_run mode
     let mut would_be_empty_dirs = HashSet::new();
+
+    reporter.start(None, "Cleaning up empty directories...".to_string());
 
     for entry in WalkDir::new(root)
         .contents_first(true)
@@ -38,6 +43,13 @@ pub fn remove_empty_dirs(
         };
 
         if is_empty {
+            reporter.update(
+                0,
+                format!(
+                    "Found empty directory: {:?}",
+                    path.file_name().unwrap_or_default()
+                ),
+            );
             if dry_run {
                 info!("[DRY RUN] Would remove empty directory: {:?}", path);
                 would_be_empty_dirs.insert(path.to_path_buf());
@@ -47,7 +59,7 @@ pub fn remove_empty_dirs(
             }
         }
     }
-
+    reporter.finish("Empty directories removed.".to_string());
     Ok(())
 }
 
