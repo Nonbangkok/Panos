@@ -10,6 +10,7 @@ pub struct MoveRecord {
     pub source: PathBuf,
     pub destination: PathBuf,
     pub timestamp: DateTime<Utc>,
+    pub file_size: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

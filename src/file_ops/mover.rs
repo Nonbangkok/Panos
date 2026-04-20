@@ -4,6 +4,7 @@ use anyhow::Result;
 use chrono::Utc;
 use tracing::info;
 
+use crate::file_ops::get_file_size;
 use crate::file_ops::history::MoveRecord;
 
 /// Move a file to destination with conflict resolution
@@ -16,6 +17,8 @@ pub fn move_file(
     if src_path == dest_path {
         return Ok(None);
     }
+
+    let file_size = get_file_size(src_path)?;
 
     let mut final_dest = dest_path.to_path_buf();
 
@@ -68,5 +71,6 @@ pub fn move_file(
         source: src_path.to_path_buf(),
         destination: final_dest,
         timestamp: Utc::now(),
+        file_size: file_size,
     }))
 }
