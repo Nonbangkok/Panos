@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use rayon::prelude::*;
 use tracing::{info, warn};
 
+use crate::check_integrity;
 use crate::config::Config;
 use crate::file_ops::{Session, move_file};
 use crate::ui::reporter::ProgressReporter;
@@ -73,6 +74,12 @@ pub fn run_undo(config: &Config, dry_run: bool, reporter: &dyn ProgressReporter)
     for res in results {
         res?;
     }
+
+    let mut undo_history = session.moves.clone();
+    for m in &mut undo_history {
+        std::mem::swap(&mut m.source, &mut m.destination);
+    }
+    check_integrity(&undo_history, dry_run, reporter)?;
 
     // 3. After Undo is completed, delete the history file to prevent duplication
     let history_path = config.source_dir.join(&config.history_file);

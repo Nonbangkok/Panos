@@ -7,7 +7,7 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use panos::{
     Args, Config,
-    file_ops::{MoveRecord, Session, remove_empty_dirs},
+    file_ops::{MoveRecord, Session, check_integrity, remove_empty_dirs},
     organizer::{organize, run_undo, watch_mode},
     ui::IndicatifReporter,
 };
@@ -47,6 +47,8 @@ fn main() -> Result<()> {
     }
 
     let history: Vec<MoveRecord> = organize(&config, args.dry_run, &reporter)?;
+
+    check_integrity(&history, args.dry_run, &reporter)?;
 
     if !args.dry_run && !history.is_empty() {
         let mut session = Session::load(&config.source_dir, &config.history_file)?;
