@@ -35,11 +35,11 @@ fn test_full_organization_flow() -> anyhow::Result<()> {
     let file5 = source_path.join("subfolder/image2.jpg");
 
     fs::create_dir(source_path.join("subfolder"))?;
-    fs::write(&file1, "jpg content")?;
-    fs::write(&file2, "pdf content")?;
-    fs::write(&file3, "temp content")?;
-    fs::write(&file4, "txt content")?;
-    fs::write(&file5, "jpg content in subfolder")?;
+    fs::write(&file1, "jpg content 1")?;
+    fs::write(&file2, "pdf content 1")?;
+    fs::write(&file3, "temp content 1")?;
+    fs::write(&file4, "txt content 1")?;
+    fs::write(&file5, "jpg content 2")?;
 
     // 3. Setup configuration
     let mut config = test_config(&source_path);
@@ -134,18 +134,24 @@ fn test_comprehensive_scenario() -> anyhow::Result<()> {
 
     // 2. Create various files
     // Extension matches
-    fs::write(source_path.join("photo.jpg"), "jpg")?;
-    fs::write(source_path.join("vacation.png"), "png")?;
-    fs::write(source_path.join("resume.pdf"), "pdf")?;
-    fs::write(source_path.join("archive.tar.gz"), "multi-dot extension")?;
+    fs::write(source_path.join("photo.jpg"), "photo content")?;
+    fs::write(source_path.join("vacation.png"), "vacation content")?;
+    fs::write(source_path.join("resume.pdf"), "resume content")?;
+    fs::write(source_path.join("archive.tar.gz"), "archive content")?;
 
     // Pattern matches
-    fs::write(source_path.join("backup_2024.zip"), "zip")?;
-    fs::write(source_path.join("old_notes.zip"), "zip")?;
-    fs::write(source_path.join("IMPORTANT_DOC.txt"), "pattern match case")?;
+    fs::write(source_path.join("backup_2024.zip"), "unique zip backup")?;
+    fs::write(source_path.join("old_notes.zip"), "unique zip notes")?;
+    fs::write(
+        source_path.join("IMPORTANT_DOC.txt"),
+        "unique pattern match",
+    )?;
 
     // Nested files
-    fs::write(source_path.join("work/projects/report.pdf"), "pdf")?;
+    fs::write(
+        source_path.join("work/projects/report.pdf"),
+        "report content",
+    )?;
 
     // Temp files
     fs::write(source_path.join("data.tmp"), "tmp")?;
@@ -369,7 +375,8 @@ fn test_watcher_stress_simulation() -> anyhow::Result<()> {
         let folder = format!("folder_{}", i % 10);
         let ext = if i % 2 == 0 { "jpg" } else { "pdf" };
         let filename = format!("file_{}.{}", i, ext);
-        fs::write(source_path.join(folder).join(filename), "data")?;
+        let content = format!("unique content for file {}", i);
+        fs::write(source_path.join(folder).join(filename), content)?;
     }
 
     // Run organization (as watch mode would trigger)

@@ -33,6 +33,7 @@ fn test_history_massive_move_records() -> anyhow::Result<()> {
             source: PathBuf::from(format!("source/file_{}.txt", i)),
             destination: PathBuf::from(format!("dest/file_{}.txt", i)),
             timestamp: Utc::now(),
+            file_size: 0,
         });
     }
 
@@ -66,6 +67,7 @@ fn test_history_unicode_paths_preservation() -> anyhow::Result<()> {
         source: PathBuf::from(thai_path),
         destination: PathBuf::from(emoji_path),
         timestamp: Utc::now(),
+        file_size: 0,
     });
 
     session.save(root, history_file)?;
@@ -95,6 +97,7 @@ fn test_history_special_characters_in_filename() -> anyhow::Result<()> {
         source: PathBuf::from("dir/file with spaces.txt"),
         destination: PathBuf::from("dir/file.with.many.dots.tar.gz"),
         timestamp: Utc::now(),
+        file_size: 0,
     });
 
     session.save(root, history_file)?;
@@ -146,6 +149,7 @@ fn test_history_overwrite_existing_history() -> anyhow::Result<()> {
         source: PathBuf::from("old"),
         destination: PathBuf::from("old_dst"),
         timestamp: Utc::now(),
+        file_size: 0,
     });
     session1.save(root, history_file)?;
 
@@ -154,6 +158,7 @@ fn test_history_overwrite_existing_history() -> anyhow::Result<()> {
         source: PathBuf::from("new"),
         destination: PathBuf::from("new_dst"),
         timestamp: Utc::now(),
+        file_size: 0,
     });
     session2.save(root, history_file)?;
 
@@ -183,6 +188,7 @@ fn test_history_deeply_nested_paths() -> anyhow::Result<()> {
         source: PathBuf::from(&deep_path),
         destination: PathBuf::from("extracted/file.txt"),
         timestamp: Utc::now(),
+        file_size: 0,
     });
 
     session.save(root, history_file)?;
@@ -221,6 +227,7 @@ fn test_history_massive_filename_length() -> anyhow::Result<()> {
         source: PathBuf::from(&long_name),
         destination: PathBuf::from("dest"),
         timestamp: Utc::now(),
+        file_size: 0,
     });
 
     session.save(root, history_file)?;
@@ -246,6 +253,7 @@ fn test_history_exact_timestamp_preservation() -> anyhow::Result<()> {
         source: PathBuf::from("s"),
         destination: PathBuf::from("d"),
         timestamp: now,
+        file_size: 0,
     });
 
     session.save(root, history_file)?;

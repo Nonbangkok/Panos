@@ -210,9 +210,8 @@ fn test_watcher_massive_burst_100_files() -> anyhow::Result<()> {
     });
     thread::sleep(Duration::from_millis(500));
 
-    // รัวสร้างไฟล์ 100 ไฟล์
     for i in 0..100 {
-        fs::write(root.join(format!("file_{}.csv", i)), "data")?;
+        fs::write(root.join(format!("file_{}.csv", i)), format!("data {}", i))?;
     }
     thread::sleep(Duration::from_secs(3));
 

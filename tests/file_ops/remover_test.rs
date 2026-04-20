@@ -111,6 +111,7 @@ fn test_remover_move_source_triggers_emptiness_dry_run() -> anyhow::Result<()> {
         source: src_file.clone(),
         destination: PathBuf::from("destination.txt"),
         timestamp: Utc::now(),
+        file_size: 0,
     }];
 
     remove_empty_dirs(root, true, &moves, &NoopReporter)?;
@@ -135,6 +136,7 @@ fn test_remover_mixed_move_and_nested_empty_dirs_dry_run() -> anyhow::Result<()>
         source: file_in_child,
         destination: PathBuf::from("elsewhere.txt"),
         timestamp: Utc::now(),
+        file_size: 0,
     }];
 
     remove_empty_dirs(root, true, &moves, &NoopReporter)?;
@@ -225,6 +227,7 @@ fn test_remover_unrelated_files_prevent_removal() -> anyhow::Result<()> {
         source: dir.join("move_me.txt"),
         destination: PathBuf::from("outside.txt"),
         timestamp: Utc::now(),
+        file_size: 0,
     }];
 
     remove_empty_dirs(root, true, &moves, &NoopReporter)?;
@@ -352,6 +355,7 @@ fn test_remover_multiple_moves_from_same_dir() -> anyhow::Result<()> {
             source: dir.join(format!("{}.txt", i)),
             destination: PathBuf::from(format!("dst_{}.txt", i)),
             timestamp: Utc::now(),
+            file_size: 0,
         });
     }
 

@@ -22,6 +22,7 @@ fn test_undo_single_file() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 4, // "data" length
         }],
     };
     session.save(root, ".history.json")?;
@@ -53,6 +54,7 @@ fn test_undo_multiple_files_filo_order() -> anyhow::Result<()> {
             source: src,
             destination: dst,
             timestamp: chrono::Utc::now(),
+            file_size: 6, // "data X" length
         });
     }
 
@@ -92,6 +94,7 @@ fn test_undo_dry_run_no_changes() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 4,
         }],
     };
     session.save(root, ".history.json")?;
@@ -153,6 +156,7 @@ fn test_undo_missing_file_at_destination() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 0,
         }],
     };
     session.save(root, ".history.json")?;
@@ -187,6 +191,7 @@ fn test_undo_massive_batch_500() -> anyhow::Result<()> {
             source: src,
             destination: dst,
             timestamp: chrono::Utc::now(),
+            file_size: 11, // "binary data"
         });
     }
 
@@ -220,6 +225,7 @@ fn test_undo_unicode_paths() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 15, // "unicode content"
         }],
     };
     session.save(root, "history.json")?;
@@ -251,6 +257,7 @@ fn test_undo_spaces_and_special_chars() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 13, // "special chars"
         }],
     };
     session.save(root, "history.json")?;
@@ -282,6 +289,7 @@ fn test_undo_deeply_nested_revert() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 4, // "deep"
         }],
     };
     session.save(root, "history.json")?;
@@ -335,11 +343,13 @@ fn test_undo_partial_success_mixed() -> anyhow::Result<()> {
                 source: src1.clone(),
                 destination: dst1.clone(),
                 timestamp: chrono::Utc::now(),
+                file_size: 7, // "i exist"
             },
             MoveRecord {
                 source: src2.clone(),
                 destination: dst2.clone(),
                 timestamp: chrono::Utc::now(),
+                file_size: 0,
             },
         ],
     };
@@ -370,6 +380,7 @@ fn test_undo_source_parent_creation() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 4, // "data"
         }],
     };
     session.save(root, "history.json")?;
@@ -405,6 +416,7 @@ fn test_undo_revert_from_trash() -> anyhow::Result<()> {
             source: src.clone(),
             destination: trash.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 13, // "trash content"
         }],
     };
     session.save(root, "history.json")?;
@@ -436,6 +448,7 @@ fn test_undo_revert_from_unknown() -> anyhow::Result<()> {
             source: src.clone(),
             destination: unknown.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 7, // "mystery"
         }],
     };
     session.save(root, "history.json")?;
@@ -466,6 +479,7 @@ fn test_undo_idempotency() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 7, // "content"
         }],
     };
     session.save(root, h_file)?;
@@ -501,6 +515,7 @@ fn test_undo_large_filename() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 4, // "long"
         }],
     };
     session.save(root, "h.json")?;
@@ -528,6 +543,7 @@ fn test_undo_move_record_timestamps() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: old_time,
+            file_size: 4, // "data"
         }],
     };
     session.save(root, "history.json")?;
@@ -555,6 +571,7 @@ fn test_undo_directory_recreation_on_revert() -> anyhow::Result<()> {
             source: src.clone(),
             destination: dst.clone(),
             timestamp: chrono::Utc::now(),
+            file_size: 7, // "content"
         }],
     };
     session.save(root, "h.json")?;

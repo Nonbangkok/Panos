@@ -22,7 +22,7 @@ fn test_scanner_deep_nesting() -> anyhow::Result<()> {
     let root = tmp.path();
     let deep_dir = root.join("level1/level2/level3");
     fs::create_dir_all(&deep_dir)?;
-    fs::write(deep_dir.join("deep.jpg"), "")?;
+    fs::write(deep_dir.join("deep.jpg"), "deep content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
@@ -37,8 +37,8 @@ fn test_scanner_deep_nesting() -> anyhow::Result<()> {
 fn test_scanner_ignore_patterns_exact() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("ignore_me.txt"), "")?;
-    fs::write(root.join("keep_me.txt"), "")?;
+    fs::write(root.join("ignore_me.txt"), "ignore content")?;
+    fs::write(root.join("keep_me.txt"), "keep content")?;
 
     let mut config = test_config(root);
     config.ignore_patterns = vec!["ignore_me.txt".to_string()];
@@ -58,11 +58,11 @@ fn test_scanner_internal_dirs_protection() -> anyhow::Result<()> {
     // Internal dirs
     let trash = root.join(".trash");
     fs::create_dir(&trash)?;
-    fs::write(trash.join("deleted.jpg"), "")?;
+    fs::write(trash.join("deleted.jpg"), "deleted content")?;
 
     let unknown = root.join(".unknown");
     fs::create_dir(&unknown)?;
-    fs::write(unknown.join("mystery.jpg"), "")?;
+    fs::write(unknown.join("mystery.jpg"), "mystery content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
@@ -79,8 +79,8 @@ fn test_scanner_destination_dirs_protection() -> anyhow::Result<()> {
 
     let dest = root.join("Images");
     fs::create_dir(&dest)?;
-    fs::write(dest.join("already_there.jpg"), "")?;
-    fs::write(root.join("new.jpg"), "")?;
+    fs::write(dest.join("already_there.jpg"), "already content")?;
+    fs::write(root.join("new.jpg"), "new content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
@@ -98,8 +98,8 @@ fn test_scanner_recursive_hidden_exclusion() -> anyhow::Result<()> {
 
     let hidden_dir = root.join(".secret_dir");
     fs::create_dir(&hidden_dir)?;
-    fs::write(hidden_dir.join("secret.jpg"), "")?;
-    fs::write(root.join("public.jpg"), "")?;
+    fs::write(hidden_dir.join("secret.jpg"), "secret content")?;
+    fs::write(root.join("public.jpg"), "public content")?;
 
     let mut config = test_config(root);
     config.exclude_hidden = true;
@@ -116,12 +116,12 @@ fn test_scanner_filtering_logic() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
 
-    fs::write(root.join("valid_photo.jpg"), "")?;
-    fs::write(root.join(".hidden_file.txt"), "")?;
+    fs::write(root.join("valid_photo.jpg"), "valid content")?;
+    fs::write(root.join(".hidden_file.txt"), "hidden content")?;
 
     let img_dir = root.join("Images");
     fs::create_dir(&img_dir)?;
-    fs::write(img_dir.join("existing_photo.jpg"), "")?;
+    fs::write(img_dir.join("existing_photo.jpg"), "existing content")?;
 
     let mut config = test_config(root);
     config.exclude_hidden = true;
@@ -138,7 +138,7 @@ fn test_scanner_filtering_logic() -> anyhow::Result<()> {
 fn test_scanner_mixed_rules_priority() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("test.pdf"), "")?;
+    fs::write(root.join("test.pdf"), "test content")?;
 
     let mut config = test_config(root);
 
@@ -164,7 +164,7 @@ fn test_scanner_mixed_rules_priority() -> anyhow::Result<()> {
 fn test_scanner_case_insensitivity() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("IMAGE.JPG"), "")?;
+    fs::write(root.join("IMAGE.JPG"), "case content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
@@ -179,8 +179,8 @@ fn test_scanner_case_insensitivity() -> anyhow::Result<()> {
 fn test_scanner_glob_patterns() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("invoice_2024.pdf"), "")?;
-    fs::write(root.join("receipt_2024.pdf"), "")?;
+    fs::write(root.join("invoice_2024.pdf"), "invoice content")?;
+    fs::write(root.join("receipt_2024.pdf"), "receipt content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Invoices", vec![], vec!["invoice_*.pdf"])];
@@ -209,7 +209,7 @@ fn test_scanner_glob_patterns() -> anyhow::Result<()> {
 fn test_scanner_no_extension_files() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("README"), "")?;
+    fs::write(root.join("README"), "readme content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Docs", vec!["txt"], vec![])];
@@ -229,7 +229,10 @@ fn test_scanner_large_extension_list() -> anyhow::Result<()> {
         "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "heic", "avif",
     ];
     for ext in &extensions {
-        fs::write(root.join(format!("test.{}", ext)), "")?;
+        fs::write(
+            root.join(format!("test.{}", ext)),
+            format!("content for {}", ext),
+        )?;
     }
 
     let mut config = test_config(root);
@@ -244,7 +247,7 @@ fn test_scanner_large_extension_list() -> anyhow::Result<()> {
 fn test_scanner_overlapping_rules_glob_vs_ext() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("special_report.pdf"), "")?;
+    fs::write(root.join("special_report.pdf"), "special content")?;
 
     let mut config = test_config(root);
     // Glob should take priority if listed first
@@ -269,7 +272,7 @@ fn test_scanner_overlapping_rules_glob_vs_ext() -> anyhow::Result<()> {
 fn test_scanner_rule_with_dots_in_extension() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("archive.tar.gz"), "")?;
+    fs::write(root.join("archive.tar.gz"), "archive content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Archives", vec!["tar.gz"], vec![])];
@@ -284,8 +287,8 @@ fn test_scanner_rule_with_dots_in_extension() -> anyhow::Result<()> {
 fn test_scanner_temp_file_cleanup() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let root = tmp.path();
-    fs::write(root.join("data.tmp"), "")?;
-    fs::write(root.join("data.part"), "")?;
+    fs::write(root.join("data.tmp"), "temp content 1")?;
+    fs::write(root.join("data.part"), "temp content 2")?;
 
     let mut config = test_config(root);
     config.temp_extensions = vec!["tmp".to_string(), "part".to_string()];
@@ -305,7 +308,7 @@ fn test_scanner_unicode_and_special_chars() -> anyhow::Result<()> {
     let root = tmp.path();
     let names = vec!["รูปภาพ.jpg", "space file.png", "special!@#$%^&()_+.txt"];
     for name in &names {
-        fs::write(root.join(name), "")?;
+        fs::write(root.join(name), format!("content for {}", name))?;
     }
 
     let mut config = test_config(root);
@@ -325,7 +328,10 @@ fn test_scanner_massive_file_count_batch() -> anyhow::Result<()> {
     let root = tmp.path();
     // Simulate 200 files (sufficient for batching but fast)
     for i in 0..200 {
-        fs::write(root.join(format!("file_{}.jpg", i)), "")?;
+        fs::write(
+            root.join(format!("file_{}.jpg", i)),
+            format!("content {}", i),
+        )?;
     }
 
     let mut config = test_config(root);
@@ -367,8 +373,8 @@ fn test_scanner_duplicate_filenames_different_folders() -> anyhow::Result<()> {
     let dir_b = root.join("folder_b");
     fs::create_dir(&dir_a)?;
     fs::create_dir(&dir_b)?;
-    fs::write(dir_a.join("same_name.jpg"), "")?;
-    fs::write(dir_b.join("same_name.jpg"), "")?;
+    fs::write(dir_a.join("same_name.jpg"), "content a")?;
+    fs::write(dir_b.join("same_name.jpg"), "content b")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
@@ -389,7 +395,7 @@ fn test_scanner_extremely_long_path() -> anyhow::Result<()> {
         current = current.join(format!("long_folder_name_{}", i));
     }
     fs::create_dir_all(&current)?;
-    fs::write(current.join("deep_file.jpg"), "")?;
+    fs::write(current.join("deep_file.jpg"), "very deep content")?;
 
     let mut config = test_config(root);
     config.rules = vec![test_rule("Images", vec!["jpg"], vec![])];
