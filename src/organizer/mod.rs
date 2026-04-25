@@ -6,4 +6,4 @@ pub mod watcher;
 
 pub use scanner::organize;
 pub use undo::run_undo;
-pub use watcher::watch_mode;
+pub use watcher::{WatcherPaths, watch_mode};

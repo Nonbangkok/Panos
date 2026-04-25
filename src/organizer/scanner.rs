@@ -78,12 +78,15 @@ fn identify_duplicates(
 ) -> (Vec<PathBuf>, Vec<(PathBuf, PathBuf)>) {
     reporter.start(None, "Identifying duplicate files...".to_string());
 
-    // ด่านที่ 1: จัดกลุ่มตามขนาด (ประหยัดพลังงานที่สุด)
+    //Group by size
+    let sizes: Vec<(u64, PathBuf)> = entries
+        .into_par_iter()
+        .filter_map(|path| get_file_size(&path).ok().map(|size| (size, path)))
+        .collect();
+
     let mut by_size: HashMap<u64, Vec<PathBuf>> = HashMap::new();
-    for path in &entries {
-        if let Ok(size) = get_file_size(&path) {
-            by_size.entry(size).or_default().push(path.clone());
-        }
+    for (size, path) in sizes {
+        by_size.entry(size).or_default().push(path);
     }
 
     let mut unique_entries = Vec::new();
@@ -96,23 +99,21 @@ fn identify_duplicates(
             continue;
         }
 
-        // Partial Check (First 4KB)
+        // Partial Check (First 4KB) - Parallelize Hashing
+        let partial_results: Vec<(PathBuf, Result<String, std::io::Error>)> = paths
+            .into_par_iter()
+            .map(|path| {
+                let h = calculate_partial_hash(&path);
+                (path, h)
+            })
+            .collect();
+
         let mut by_partial: HashMap<String, Vec<PathBuf>> = HashMap::new();
-        for path in &paths {
-            reporter.update(
-                0,
-                format!(
-                    "⚡️ Analyzing: {}",
-                    path.file_name()
-                        .unwrap_or_default()
-                        .to_str()
-                        .unwrap_or("unknown")
-                ),
-            );
-            if let Ok(h) = calculate_partial_hash(&path) {
-                by_partial.entry(h).or_default().push(path.clone());
+        for (path, res) in partial_results {
+            if let Ok(h) = res {
+                by_partial.entry(h).or_default().push(path);
             } else {
-                unique_entries.push(path.clone());
+                unique_entries.push(path);
             }
         }
 
@@ -123,22 +124,21 @@ fn identify_duplicates(
                 continue;
             }
 
+            // Final Check (Full Hash) - Parallelize Hashing
+            let full_results: Vec<(PathBuf, Result<String, std::io::Error>)> = p_paths
+                .into_par_iter()
+                .map(|path| {
+                    let h = calculate_full_hash(&path);
+                    (path, h)
+                })
+                .collect();
+
             let mut by_full: HashMap<String, Vec<PathBuf>> = HashMap::new();
-            for path in &p_paths {
-                reporter.update(
-                    0,
-                    format!(
-                        "⚡️ Analyzing: {}",
-                        path.file_name()
-                            .unwrap_or_default()
-                            .to_str()
-                            .unwrap_or("unknown")
-                    ),
-                );
-                if let Ok(f_hash) = calculate_full_hash(&path) {
-                    by_full.entry(f_hash).or_default().push(path.clone());
+            for (path, res) in full_results {
+                if let Ok(f_hash) = res {
+                    by_full.entry(f_hash).or_default().push(path);
                 } else {
-                    unique_entries.push(path.clone());
+                    unique_entries.push(path);
                 }
             }
 

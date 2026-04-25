@@ -1,6 +1,6 @@
 use panos::{
     file_ops::{Session, remove_empty_dirs},
-    organizer::{organize, run_undo},
+    organizer::{organize, run_undo,WatcherPaths},
     ui::NoopReporter,
 };
 use std::fs;
@@ -323,7 +323,8 @@ fn test_should_ignore_rigorous() -> anyhow::Result<()> {
             .add_path(trash_file)
             .add_path(ds_store);
 
-    assert!(panos::should_ignore(&event_ignore, &config));
+    let wp = WatcherPaths::new(&config);
+    assert!(panos::should_ignore(&event_ignore, &config, &wp));
 
     // Case 2: Mixed paths (one noise, one valid) -> should return false (DO NOT ignore)
     let event_mixed =
@@ -332,14 +333,14 @@ fn test_should_ignore_rigorous() -> anyhow::Result<()> {
             .add_path(valid_photo); // Valid!
 
     // This is the bug we fixed! It should be false now because there's a valid path.
-    assert!(!panos::should_ignore(&event_mixed, &config));
+    assert!(!panos::should_ignore(&event_mixed, &config, &wp));
 
     // Case 3: All valid -> should return false
     let event_valid =
         notify::Event::new(notify::EventKind::Create(notify::event::CreateKind::File))
             .add_path(valid_pdf);
 
-    assert!(!panos::should_ignore(&event_valid, &config));
+    assert!(!panos::should_ignore(&event_valid, &config, &wp));
 
     Ok(())
 }

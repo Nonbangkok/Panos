@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use notify::{Config as NotifyConfig, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
@@ -15,6 +16,37 @@ use crate::ui::NoopReporter;
 
 /// Global lock to prevent the watcher from reacting to our own file movements
 static IS_ORGANIZING: AtomicBool = AtomicBool::new(false);
+ 
+pub struct WatcherPaths {
+    abs_source: PathBuf,
+    abs_trash: PathBuf,
+    abs_unknown: PathBuf,
+    abs_history: PathBuf,
+    abs_destinations: Vec<PathBuf>,
+}
+ 
+impl WatcherPaths {
+    pub fn new(config: &Config) -> Self {
+        let abs_source =
+            std::fs::canonicalize(&config.source_dir).unwrap_or(config.source_dir.clone());
+        let abs_trash = abs_source.join(&config.trash_dir);
+        let abs_unknown = abs_source.join(&config.unknown_dir);
+        let abs_history = abs_source.join(&config.history_file);
+        let abs_destinations = config
+            .rules
+            .iter()
+            .map(|r| abs_source.join(&r.destination))
+            .collect();
+ 
+        Self {
+            abs_source,
+            abs_trash,
+            abs_unknown,
+            abs_history,
+            abs_destinations,
+        }
+    }
+}
 
 pub fn watch_mode(config: &Config, dry_run: bool, ai: &mut Option<PanosAI>) -> Result<()> {
     let source_dir = &config.source_dir;
@@ -30,7 +62,8 @@ pub fn watch_mode(config: &Config, dry_run: bool, ai: &mut Option<PanosAI>) -> R
 
     info!("👀 Watching for changes in: {:?}", source_dir);
 
-    run_event_loop(rx, config, dry_run, ai)
+    let paths = WatcherPaths::new(config);
+    run_event_loop(rx, config, dry_run, ai, &paths)
 }
 
 fn run_event_loop(
@@ -38,6 +71,7 @@ fn run_event_loop(
     config: &Config,
     dry_run: bool,
     ai: &mut Option<PanosAI>,
+    paths: &WatcherPaths,
 ) -> Result<()> {
     let mut last_event_time = None;
     let debounce_duration = Duration::from_secs(config.debounce_seconds);
@@ -51,7 +85,7 @@ fn run_event_loop(
                 );
 
                 // Check if we are currently organizing (Atomic Lock) and Filter out unnecessary events (Path Exclusion)
-                if IS_ORGANIZING.load(Ordering::SeqCst) || should_ignore(&event, config) {
+                if IS_ORGANIZING.load(Ordering::SeqCst) || should_ignore(&event, config, paths) {
                     continue;
                 }
 
@@ -78,26 +112,21 @@ fn run_event_loop(
 
 /// Determines if an event should be ignored.
 /// An event is ignored ONLY if ALL paths in it are considered noise (trash, destinations, etc.)
-pub fn should_ignore(event: &Event, config: &Config) -> bool {
-    let abs_source = std::fs::canonicalize(&config.source_dir).unwrap_or(config.source_dir.clone());
-    let abs_trash = abs_source.join(&config.trash_dir);
-    let abs_unknown = abs_source.join(&config.unknown_dir);
-    let abs_history = abs_source.join(&config.history_file);
-
+pub fn should_ignore(event: &Event, config: &Config, wp: &WatcherPaths) -> bool {
     // If all paths in the event match ignore criteria, then we ignore the whole event.
     // If even one path is "valid" (should be organized), we return false to trigger organize.
     event.paths.iter().all(|path| {
         let abs_path = std::fs::canonicalize(path).unwrap_or(path.to_path_buf());
 
         // 1. Ignore source directory itself
-        if abs_path == abs_source {
+        if abs_path == wp.abs_source {
             return true;
         }
 
         // 2. Ignore internal managed directories (trash, unknown, history)
-        if abs_path.starts_with(&abs_trash)
-            || abs_path.starts_with(&abs_unknown)
-            || abs_path == abs_history
+        if abs_path.starts_with(&wp.abs_trash)
+            || abs_path.starts_with(&wp.abs_unknown)
+            || abs_path == wp.abs_history
         {
             return true;
         }
@@ -113,9 +142,8 @@ pub fn should_ignore(event: &Event, config: &Config) -> bool {
         }
 
         // 4. Ignore destination paths (to prevent trigger recursion when moving files)
-        for rule in &config.rules {
-            let dest_path = abs_source.join(&rule.destination);
-            if abs_path.starts_with(&dest_path) {
+        for dest_path in &wp.abs_destinations {
+            if abs_path.starts_with(dest_path) {
                 return true;
             }
         }

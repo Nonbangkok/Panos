@@ -14,7 +14,7 @@ pub struct Rule {
     pub destination: PathBuf,
 
     #[serde(skip)]
-    pub compiled_patterns: Vec<glob::Pattern>,
+    pub glob_set: Option<globset::GlobSet>,
 }
 
 impl Default for Rule {
@@ -25,7 +25,7 @@ impl Default for Rule {
             patterns: vec![],
             semantic_label: None,
             destination: PathBuf::new(),
-            compiled_patterns: vec![],
+            glob_set: None,
         }
     }
 }
@@ -33,12 +33,12 @@ impl Default for Rule {
 impl Rule {
     pub fn matches(&self, filename: &str, extension: &str) -> bool {
         // check pattern
-        for pattern in &self.compiled_patterns {
-            if pattern.matches(filename) {
+        if let Some(set) = &self.glob_set {
+            if set.is_match(filename) {
                 return true;
             }
         }
-
+ 
         // check extension
         for ext in &self.extensions {
             if ext.to_lowercase() == extension {
@@ -63,13 +63,20 @@ impl Rule {
             .collect();
 
         // patterns compile
-        for pattern in &self.patterns {
-            let pattern_lower = pattern.to_lowercase();
-            if let Ok(p) = glob::Pattern::new(&pattern_lower) {
-                self.compiled_patterns.push(p);
-            } else {
-                tracing::warn!("Invalid pattern: {:?}", pattern_lower);
+        if !self.patterns.is_empty() {
+            let mut builder = globset::GlobSetBuilder::new();
+            for pattern in &self.patterns {
+                let pattern_lower = pattern.to_lowercase();
+                match globset::Glob::new(&pattern_lower) {
+                    Ok(g) => {
+                        builder.add(g);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Invalid pattern {:?}: {}", pattern_lower, e);
+                    }
+                }
             }
+            self.glob_set = builder.build().ok();
         }
     }
 }
