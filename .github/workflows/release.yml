@@ -10,6 +10,7 @@ jobs:
     name: Build for ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -20,7 +21,7 @@ jobs:
             target: x86_64-pc-windows-msvc
             artifact_name: panos.exe
             asset_name: panos-windows-x64
-          - os: macos-latest
+          - os: macos-13
             target: x86_64-apple-darwin
             artifact_name: panos
             asset_name: panos-macos-x64
