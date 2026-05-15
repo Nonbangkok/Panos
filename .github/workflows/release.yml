@@ -4,7 +4,10 @@ on:
   push:
     tags:
       - 'v*'
-
+ 
+permissions:
+  contents: write
+ 
 jobs:
   build:
     name: Build for ${{ matrix.target }}
@@ -49,6 +52,8 @@ jobs:
           pip install optimum[onnxruntime] transformers
 
       - name: Export AI Model
+        env:
+          PYTHONUTF8: "1"
         run: python scripts/export_onnx.py
 
       - name: Build release
