@@ -1,72 +1,110 @@
-source_dir = ".test_data"
-watch_mode = false
+# 🌌 PANOS: Professional Suite Configuration
+source_dir = "."
+watch_mode = true
 debounce_seconds = 2
-polling_interval_ms = 500
-temp_extensions = ["tmp", "crdownload", "part", "log"]
-ignore_patterns = [
-    ".DS_Store",
-    ".git",
-    ".svn",
-    ".hg",
-    "Thumbs.db",
-    "desktop.ini",
-    "node_modules",
-    "target",
-    ".vscode",
-]
-trash_dir = ".panos_trash" # Directory to move files to when undoing
-duplicates_dir = ".panos_duplicates" # Directory to move files to when duplicates found
-unknown_dir = ".panos_unknown" # Directory to move files to when unknown
-history_file = ".panos_history.json" # File to store history of moves
-exclude_hidden = false # Exclude hidden files
-model_dir = "model_assets"
+polling_interval_ms = 100
+exclude_hidden = true
+
+# 🧠 AI Brain Settings
 ai_enabled = true
-ai_threshold = 0.65
+model_dir = "model_assets"
+ai_threshold = 0.50
+
+# 🗑️ Managed Directories
+trash_dir = ".panos_trash"
+unknown_dir = ".panos_unknown"
+duplicates_dir = ".panos_duplicates"
+history_file = ".panos_history.json"
+
+# 🛠️ System Hygiene
+temp_extensions = ["tmp", "crdownload", "part", "cache", "download", "log", "bak"]
+ignore_patterns = ["node_modules", "target", ".git", ".DS_Store", "venv", ".venv", ".idea", ".vscode"]
+
+# =========================================================
+# 📂 RULES ENGINE
+# =========================================================
+
+# --- 🖼️ Visual Media ---
+[[rules]]
+name = "Images"
+extensions = ["jpg", "jpeg", "png", "gif", "webp", "heic", "avif", "bmp", "tiff"]
+destination = "Media/Images"
+semantic_label = "photograph, picture, visual art, digital image"
 
 [[rules]]
-name = "Music"
-extensions = ["mp3", "wav", "flac"]
-semantic_label = "music, audio, songs, soundtrack, lofi"
-destination = "Media/Music"
+name = "Vector Graphics"
+extensions = ["svg", "ai", "eps", "pdf"]
+patterns = ["logo_*", "icon_*", "*_vector*"]
+destination = "Media/Vectors"
+semantic_label = "illustration, graphic design, vector art, scalable graphics"
+
+# --- 📄 Documents & Office ---
+[[rules]]
+name = "PDF Documents"
+extensions = ["pdf"]
+destination = "Documents/PDFs"
+semantic_label = "official document, portable document format, scanned paper"
 
 [[rules]]
-name = "Videos"
-extensions = ["mp4", "mkv", "mov"]
-semantic_label = "videos, movies, family footage, cinema"
-destination = "Media/Videos"
+name = "Office Documents"
+extensions = ["docx", "doc", "xlsx", "xls", "pptx", "ppt", "csv", "rtf"]
+destination = "Documents/Office"
+semantic_label = "business report, spreadsheet, presentation, word processing"
 
 [[rules]]
-name = "Programming"
-extensions = ["rs", "py", "js", "ts", "go", "c", "cpp"]
-semantic_label = "programming source code, script, software logic, development"
-destination = "Dev/Code"
-
-[[rules]]
-name = "Financial"
-extensions = ["pdf", "xlsx", "csv"]
-semantic_label = "financial invoice, billing, bank statement, tax report"
-destination = "Documents/Finance"
-
-[[rules]]
-name = "Health"
-extensions = ["pdf", "jpg", "png"]
-semantic_label = "medical records, health reports, blood test, doctor"
-destination = "Documents/Health"
-
-[[rules]]
-name = "Travel"
-extensions = ["pdf", "docx", "jpg"]
-semantic_label = "travel itinerary, flight ticket, hotel booking, vacation plan"
-destination = "Documents/Travel"
-
-[[rules]]
-name = "Work"
-extensions = ["docx", "pptx", "pdf"]
-semantic_label = "business meeting minutes, corporate presentation, work project"
-destination = "Documents/Work"
-
-[[rules]]
-name = "Books"
-extensions = ["pdf", "epub", "mobi"]
-semantic_label = "ebooks, literature, reading material, educational guide"
+name = "E-Books"
+extensions = ["epub", "mobi", "azw3"]
 destination = "Documents/Library"
+semantic_label = "electronic book, reading material, literature"
+
+# --- 🎬 Audio & Video ---
+[[rules]]
+name = "Video"
+extensions = ["mp4", "mkv", "mov", "avi", "webm", "flv"]
+destination = "Media/Video"
+semantic_label = "movie, footage, recording, cinematic content"
+
+[[rules]]
+name = "Audio"
+extensions = ["mp3", "wav", "flac", "m4a", "ogg", "aac"]
+destination = "Media/Audio"
+semantic_label = "music, podcast, sound effect, voice recording"
+
+# --- 💻 Development & Code ---
+[[rules]]
+name = "Source Code"
+extensions = ["rs", "py", "js", "ts", "c", "cpp", "go", "java", "html", "css"]
+destination = "Development/Source"
+semantic_label = "programming logic, script, software development, code file"
+
+[[rules]]
+name = "Data & Config"
+extensions = ["json", "yaml", "yml", "toml", "xml", "sql"]
+destination = "Development/Data"
+semantic_label = "structured data, configuration, database dump"
+
+# --- 📦 Archives & Installers ---
+[[rules]]
+name = "Archives"
+extensions = ["zip", "rar", "7z", "tar", "gz", "bz2"]
+destination = "Archives"
+semantic_label = "compressed file, backup package, zipped content"
+
+[[rules]]
+name = "Installers"
+extensions = ["dmg", "pkg", "exe", "msi", "app"]
+destination = "Installers"
+semantic_label = "software installation, application setup, computer program"
+
+# --- 🎨 Design & Assets ---
+[[rules]]
+name = "Design Assets"
+extensions = ["psd", "fig", "sketch", "xd"]
+destination = "Design/Projects"
+semantic_label = "ui design, photoshop document, prototype, creative asset"
+
+[[rules]]
+name = "Fonts"
+extensions = ["ttf", "otf", "woff", "woff2"]
+destination = "Design/Fonts"
+semantic_label = "typography, typeface, font family"
